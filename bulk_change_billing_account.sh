@@ -104,7 +104,22 @@ remove_projects_without_billing(){
   done
 
   echo "${projects[@]}"
+}
 
+remove_projects_with_new_billing_account() {
+  local project_ids=($@)
+  local projects=()
+
+  for project_id in "${project_ids[@]}"; do
+    billing_account=$(gcloud billing projects describe $project_id --format="value(billingAccountName)")
+    if [ "$billing_account" = "billingAccounts/$TARGET_BILLING_ACCOUNT_ID" ]; then
+      echo "[$(date)] skipping: Project $project_id already linked to $TARGET_BILLING_ACCOUNT_ID." >> $LOG_FILE
+    else
+      projects+=($project_id)
+    fi
+  done
+
+  echo "${projects[@]}"
 }
 
 if [ -n "$ORG_ID" ]; then
@@ -121,6 +136,7 @@ fi
 touch $LOG_FILE
 
 ALL_PROJECT_IDS=($(remove_projects_without_billing ${ALL_PROJECT_IDS[@]}))
+ALL_PROJECT_IDS=($(remove_projects_with_new_billing_account ${ALL_PROJECT_IDS[@]}))
 
 for project_id in "${ALL_PROJECT_IDS[@]}"; do
 
